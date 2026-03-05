@@ -12,8 +12,8 @@ from flask_migrate import upgrade
 from jinja2 import FileSystemLoader
 from jinja2.sandbox import SandboxedEnvironment
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.sansio.utils import get_host
 from werkzeug.utils import safe_join
-from werkzeug.wsgi import get_host
 
 import CTFd.utils.config
 from CTFd import utils

@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from flask.json.tag import TaggedJSONSerializer
+from flask.json import dumps as json_dumps, loads as json_loads
 from flask.sessions import SessionInterface, SessionMixin
 from itsdangerous import BadSignature, want_bytes
 from werkzeug.datastructures import CallbackDict
@@ -47,7 +47,6 @@ class CachingSessionInterface(SessionInterface):
     https://github.com/fengsp/flask-session/blob/master/flask_session/sessions.py#L90
     """
 
-    serializer = TaggedJSONSerializer()
     session_class = CachedSession
 
     def _generate_sid(self):
@@ -64,7 +63,7 @@ class CachingSessionInterface(SessionInterface):
         self.permanent = permanent
 
     def open_session(self, app, request):
-        sid = request.cookies.get(app.session_cookie_name)
+        sid = request.cookies.get(app.config["SESSION_COOKIE_NAME"])
         if not sid:
             sid = self._generate_sid()
             return self.session_class(sid=sid, permanent=self.permanent)
@@ -82,7 +81,7 @@ class CachingSessionInterface(SessionInterface):
         val = cache.get(self.key_prefix + sid)
         if val is not None:
             try:
-                data = self.serializer.loads(val)
+                data = json_loads(val)
                 return self.session_class(data, sid=sid)
             except Exception:
                 return self.session_class(sid=sid, permanent=self.permanent)
@@ -96,7 +95,7 @@ class CachingSessionInterface(SessionInterface):
             if session.modified:
                 cache.delete(self.key_prefix + session.sid)
                 response.delete_cookie(
-                    app.session_cookie_name, domain=domain, path=path
+                    app.config["SESSION_COOKIE_NAME"], domain=domain, path=path
                 )
             return
 
@@ -105,7 +104,7 @@ class CachingSessionInterface(SessionInterface):
             secure = self.get_cookie_secure(app)
             expires = self.get_expiration_time(app, session)
             samesite = self.get_cookie_samesite(app)
-            val = self.serializer.dumps(dict(session))
+            val = json_dumps(dict(session))
 
             if session.sid is None:
                 session.sid = self._generate_sid()
@@ -122,7 +121,7 @@ class CachingSessionInterface(SessionInterface):
                 session_id = session.sid
 
             response.set_cookie(
-                app.session_cookie_name,
+                app.config["SESSION_COOKIE_NAME"],
                 session_id,
                 expires=expires,
                 httponly=httponly,
